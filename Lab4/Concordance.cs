@@ -53,19 +53,16 @@ namespace TLG.Concordance
                 // Create an INSERT statement using parameters
                 // Always use parameters as they are not parsed and thus will not be a SQL injection path
                 string insertStmt = "INSERT INTO [AChristmasCarol].[WordRefs] (Word, ParagraphIndex, SentenceIndex, WordPositionIndex) VALUES(@word, @paragraph, @sentence, @wordPosition);";
+                string uniqueWordStmt = "INSERT INTO [AChristmasCarol].[UniqueWords] SELECT DISTINCT [Word] FROM [AChristmasCarol].[WordRefs];";
+                string insertParagraphsStmt = "INSERT INTO [AChristmasCarol].[Paragraphs] (ParagraphIndex, Paragraph) VALUES(@paragraph, @paragraphContent);";
+                string insertSentenceStmt = "INSERT INTO [AChristmasCarol].[Sentences] (ParagraphIndex, SentenceIndex, Sentence) VALUES(@paragraph, @sentence, @sentenceContent);";
+
                 // Statements to clear previous run from tables
                 string truncateStmtRefs = "TRUNCATE TABLE [AChristmasCarol].[WordRefs];";
                 string truncateStmtWords = "TRUNCATE TABLE [AChristmasCarol].[UniqueWords];";
-                // Statement to build unique word table
-                string uniqueWordStmt = "INSERT INTO [AChristmasCarol].[UniqueWords] SELECT DISTINCT [Word] FROM [AChristmasCarol].[WordRefs];";
-                // Set up a command object
-
-                string insertParagraphsStmt = "INSERT INTO [AChristmasCarol].[Paragraphs] (ParagraphIndex, Paragraph) VALUES(@paragraph, @paragraphContent);";
                 string truncateStmtParagraphs = "TRUNCATE TABLE [AChristmasCarol].[Paragraphs];";
-
-                string insertSentenceStmt = "INSERT INTO [AChristmasCarol].[Sentences] (ParagraphIndex, SentenceIndex, Sentence) VALUES(@paragraph, @sentence, @sentenceContent);";
                 string truncateStmtSentences = "TRUNCATE TABLE [AChristmasCarol].[Sentences];";
-
+                
                 using (SqlCommand cmd = new SqlCommand(truncateStmtRefs, connection))
                 {
                     connection.Open();
@@ -73,27 +70,22 @@ namespace TLG.Concordance
                     // Execute the truncations
                     cmd.ExecuteNonQuery();
                     cmd.CommandText = truncateStmtWords;
-                    // Execute the truncations
                     cmd.ExecuteNonQuery();
                     cmd.CommandText = truncateStmtParagraphs;
-
                     cmd.ExecuteNonQuery();
                     cmd.CommandText = truncateStmtSentences;
 
-                    // Set up the Wordref insertion
+                    // Set up the population of the Wordref table
                     cmd.ExecuteNonQuery();
-                    cmd.CommandText = insertStmt;
-
-                    
+                    cmd.CommandText = insertStmt;                                   
 
                     // Define parameters
                     cmd.Parameters.Add("@word", SqlDbType.NVarChar);
                     cmd.Parameters.Add("@paragraph", SqlDbType.Int);
                     cmd.Parameters.Add("@sentence", SqlDbType.Int);
-                    cmd.Parameters.Add("@wordPosition", SqlDbType.Int);
-                    
+                    cmd.Parameters.Add("@wordPosition", SqlDbType.Int);                    
 
-                    // Loop through the Wordref list
+                    // Populate Wordref table
                     foreach (Wordref wdref in anlz.wordRefs)
                     {
                         cmd.Parameters["@word"].Value = wdref.word;
@@ -103,6 +95,8 @@ namespace TLG.Concordance
                         
                         cmd.ExecuteNonQuery();
                     }
+
+                    // Set up for the population of the Paragraphs table
                     cmd.Parameters.Clear();
                     cmd.CommandText = insertParagraphsStmt;
                     
@@ -110,7 +104,7 @@ namespace TLG.Concordance
                     cmd.Parameters.Add("@paragraph", SqlDbType.Int);
                     cmd.Parameters.Add("@paragraphContent", SqlDbType.NVarChar);
                     
-                    // Loop through the para list
+                    // Populate the paragraphs table
                     foreach (Paragraph para in anlz.paragraphs)
                     {
                         cmd.Parameters["@paragraphContent"].Value = para.text;
@@ -119,7 +113,7 @@ namespace TLG.Concordance
                         cmd.ExecuteNonQuery();
                     }
 
-                    // clear parameters and reassign CommandText
+                    // Set up for the population of the Sentences table
                     cmd.Parameters.Clear();
                     cmd.CommandText = insertSentenceStmt;
 
@@ -128,7 +122,7 @@ namespace TLG.Concordance
                     cmd.Parameters.Add("@sentence", SqlDbType.Int);
                     cmd.Parameters.Add("@sentenceContent", SqlDbType.NVarChar);
 
-                    // Loop through the paragraphs/sentences/wordrefs list
+                    // Populate the Sentences table
                     foreach (Paragraph para in anlz.paragraphs)
                     {
                         foreach (Sentence sentence in para.sentences)
@@ -140,16 +134,15 @@ namespace TLG.Concordance
                         }
                     }
 
-
                     // Build the UniqueWords table
                     cmd.Parameters.Clear();
                     cmd.CommandText = uniqueWordStmt;
                     cmd.ExecuteNonQuery();
 
                     connection.Close();
-                }
-            }
-        }
+                } // End using
+            } // End using
+        } // End Main()
 
         static void ReadInputs()
         {
@@ -195,7 +188,7 @@ namespace TLG.Concordance
             {
                 Console.WriteLine($"Invalid excluded words input path {args[1]}");
             }
-        }
+        } // End GetPaths()
 
-    }
-}
+    } // End class Concordance
+} // End namespace TLG.Concordance
